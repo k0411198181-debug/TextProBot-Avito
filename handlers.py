@@ -21,7 +21,6 @@ from keyboards import (
     main_menu,
     onboarding_keyboard,
     paywall_inline,
-    share_bot_inline,
     submenu_keyboard,
     tariffs_inline,
 )
@@ -133,7 +132,6 @@ async def maybe_show_paywall(message: Message, user_id: int, score: int) -> None
     user = await DB.get_user(user_id)
     if user and user["plan"] == "free":
         await message.answer(PAYWALL_TEMPLATE.format(score=score), reply_markup=paywall_inline())
-        await message.answer("Понравился результат? Поделись ботом и получи больше трафика через реферальную ссылку 👇", reply_markup=share_bot_inline(settings.bot_username, user_id))
 
 
 async def run_generation(
@@ -223,85 +221,89 @@ async def onb_try(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
-
-
 @router.message(Command("menu"))
 async def menu_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await show_main_menu(message)
 
 
 @router.message(Command("avito"))
 async def avito_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await avito_menu(message)
 
 
 @router.message(Command("youtube"))
 async def youtube_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await youtube_menu(message)
 
 
 @router.message(Command("telegram"))
 async def telegram_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await tg_menu(message)
 
 
 @router.message(Command("instagram"))
 async def instagram_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await ig_menu(message)
 
 
 @router.message(Command("history"))
 async def history_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await history_handler(message)
 
 
 @router.message(Command("profile"))
 async def profile_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await profile_handler(message)
 
 
 @router.message(Command("tariffs"))
 async def tariffs_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await tariffs_handler(message)
 
 
 @router.message(Command("help"))
 async def help_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
     await help_handler(message)
 
 
+@router.message(Command("promo"))
+async def promo_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
+    await state.set_state(Form.promo)
+    await message.answer("Отправь промокод одним сообщением.")
 
-@router.message(F.text.in_({"/menu", "/avito", "/youtube", "/telegram", "/instagram", "/history", "/profile", "/tariffs", "/help"}))
-async def slash_text_aliases(message: Message, state: FSMContext) -> None:
+
+@router.message(Command("ref"))
+async def ref_command(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.clear()
-    cmd = (message.text or "").split()[0].lower()
-    if cmd == "/menu":
-        await show_main_menu(message)
-    elif cmd == "/avito":
-        await avito_menu(message)
-    elif cmd == "/youtube":
-        await youtube_menu(message)
-    elif cmd == "/telegram":
-        await tg_menu(message)
-    elif cmd == "/instagram":
-        await ig_menu(message)
-    elif cmd == "/history":
-        await history_handler(message)
-    elif cmd == "/profile":
-        await profile_handler(message)
-    elif cmd == "/tariffs":
-        await tariffs_handler(message)
-    elif cmd == "/help":
-        await help_handler(message)
+    ref_slug = settings.bot_username or "your_bot"
+    ref_link = f"https://t.me/{ref_slug}?start=ref_{message.from_user.id}"
+    await message.answer(
+        f"🔗 Твоя реферальная ссылка:\n{ref_link}\n\nЗа каждого приглашённого друга даём бонусные генерации.",
+        reply_markup=share_bot_inline(settings.bot_username, message.from_user.id),
+    )
+
+
+
 
 @router.message(F.text == "🛒 Avito")
 async def avito_menu(message: Message) -> None:
@@ -339,10 +341,11 @@ async def help_handler(message: Message) -> None:
 
 @router.message(F.text == "👤 Профиль")
 async def profile_handler(message: Message) -> None:
-    user = await DB.get_user(message.from_user.id)
+    user = await ensure_user(message)
     if not user:
-        await message.answer("Сначала нажми /start")
+        await message.answer("Не удалось открыть профиль.")
         return
+    user = await DB.get_user(message.from_user.id)
     ref_slug = settings.bot_username or "your_bot"
     ref_link = f"https://t.me/{ref_slug}?start=ref_{message.from_user.id}"
     expires = user["plan_expires_at"] or "—"
@@ -355,7 +358,8 @@ async def profile_handler(message: Message) -> None:
             bonus=user["bonus_generations"],
             refs=user["referral_count"],
             ref_link=ref_link,
-        )
+        ),
+        reply_markup=share_bot_inline(settings.bot_username, message.from_user.id),
     )
 
 
@@ -529,6 +533,7 @@ async def ig_finish(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text == "🎟️ Ввести промокод")
 async def promo_start(message: Message, state: FSMContext) -> None:
+    await ensure_user(message)
     await state.set_state(Form.promo)
     await message.answer("Отправь промокод одним сообщением.")
 
@@ -650,37 +655,6 @@ async def broadcast(message: Message, command: CommandObject) -> None:
 
 
 @router.message()
-async def fallback(message: Message, state: FSMContext) -> None:
+async def fallback(message: Message) -> None:
     await ensure_user(message)
-    text = (message.text or "").strip().split()[0].lower()
-    if text.startswith("/"):
-        plain = text.split("@", 1)[0]
-        await state.clear()
-        if plain == "/menu":
-            await show_main_menu(message)
-            return
-        if plain == "/avito":
-            await avito_menu(message)
-            return
-        if plain == "/youtube":
-            await youtube_menu(message)
-            return
-        if plain == "/telegram":
-            await tg_menu(message)
-            return
-        if plain == "/instagram":
-            await ig_menu(message)
-            return
-        if plain == "/history":
-            await history_handler(message)
-            return
-        if plain == "/profile":
-            await profile_handler(message)
-            return
-        if plain == "/tariffs":
-            await tariffs_handler(message)
-            return
-        if plain == "/help":
-            await help_handler(message)
-            return
     await message.answer("Не понял запрос. Выбери действие из меню 👇", reply_markup=main_menu())
