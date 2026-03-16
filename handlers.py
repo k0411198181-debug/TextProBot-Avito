@@ -21,6 +21,7 @@ from keyboards import (
     main_menu,
     onboarding_keyboard,
     paywall_inline,
+    share_bot_inline,
     submenu_keyboard,
     tariffs_inline,
 )
@@ -132,6 +133,7 @@ async def maybe_show_paywall(message: Message, user_id: int, score: int) -> None
     user = await DB.get_user(user_id)
     if user and user["plan"] == "free":
         await message.answer(PAYWALL_TEMPLATE.format(score=score), reply_markup=paywall_inline())
+        await message.answer("Понравился результат? Поделись ботом и получи больше трафика через реферальную ссылку 👇", reply_markup=share_bot_inline(settings.bot_username, user_id))
 
 
 async def run_generation(
@@ -220,6 +222,61 @@ async def onb_try(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.message.answer(HOW_IT_WORKS, reply_markup=main_menu())
     await callback.answer()
 
+
+
+
+@router.message(Command("menu"))
+async def menu_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await show_main_menu(message)
+
+
+@router.message(Command("avito"))
+async def avito_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await avito_menu(message)
+
+
+@router.message(Command("youtube"))
+async def youtube_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await youtube_menu(message)
+
+
+@router.message(Command("telegram"))
+async def telegram_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await tg_menu(message)
+
+
+@router.message(Command("instagram"))
+async def instagram_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await ig_menu(message)
+
+
+@router.message(Command("history"))
+async def history_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await history_handler(message)
+
+
+@router.message(Command("profile"))
+async def profile_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await profile_handler(message)
+
+
+@router.message(Command("tariffs"))
+async def tariffs_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await tariffs_handler(message)
+
+
+@router.message(Command("help"))
+async def help_command(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await help_handler(message)
 
 @router.message(F.text == "🛒 Avito")
 async def avito_menu(message: Message) -> None:
