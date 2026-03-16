@@ -221,90 +221,6 @@ async def onb_try(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
-@router.message(Command("menu"))
-async def menu_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await show_main_menu(message)
-
-
-@router.message(Command("avito"))
-async def avito_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await avito_menu(message)
-
-
-@router.message(Command("youtube"))
-async def youtube_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await youtube_menu(message)
-
-
-@router.message(Command("telegram"))
-async def telegram_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await tg_menu(message)
-
-
-@router.message(Command("instagram"))
-async def instagram_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await ig_menu(message)
-
-
-@router.message(Command("history"))
-async def history_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await history_handler(message)
-
-
-@router.message(Command("profile"))
-async def profile_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await profile_handler(message)
-
-
-@router.message(Command("tariffs"))
-async def tariffs_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await tariffs_handler(message)
-
-
-@router.message(Command("help"))
-async def help_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    await help_handler(message)
-
-
-@router.message(Command("promo"))
-async def promo_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.set_state(Form.promo)
-    await message.answer("Отправь промокод одним сообщением.")
-
-
-@router.message(Command("ref"))
-async def ref_command(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
-    await state.clear()
-    ref_slug = settings.bot_username or "your_bot"
-    ref_link = f"https://t.me/{ref_slug}?start=ref_{message.from_user.id}"
-    await message.answer(
-        f"🔗 Твоя реферальная ссылка:\n{ref_link}\n\nЗа каждого приглашённого друга даём бонусные генерации.",
-        reply_markup=share_bot_inline(settings.bot_username, message.from_user.id),
-    )
-
-
-
-
 @router.message(F.text == "🛒 Avito")
 async def avito_menu(message: Message) -> None:
     await message.answer("🛒 <b>Avito</b>", reply_markup=submenu_keyboard(AVITO_MENU))
@@ -341,11 +257,10 @@ async def help_handler(message: Message) -> None:
 
 @router.message(F.text == "👤 Профиль")
 async def profile_handler(message: Message) -> None:
-    user = await ensure_user(message)
-    if not user:
-        await message.answer("Не удалось открыть профиль.")
-        return
     user = await DB.get_user(message.from_user.id)
+    if not user:
+        await message.answer("Сначала нажми /start")
+        return
     ref_slug = settings.bot_username or "your_bot"
     ref_link = f"https://t.me/{ref_slug}?start=ref_{message.from_user.id}"
     expires = user["plan_expires_at"] or "—"
@@ -358,8 +273,7 @@ async def profile_handler(message: Message) -> None:
             bonus=user["bonus_generations"],
             refs=user["referral_count"],
             ref_link=ref_link,
-        ),
-        reply_markup=share_bot_inline(settings.bot_username, message.from_user.id),
+        )
     )
 
 
@@ -533,7 +447,6 @@ async def ig_finish(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text == "🎟️ Ввести промокод")
 async def promo_start(message: Message, state: FSMContext) -> None:
-    await ensure_user(message)
     await state.set_state(Form.promo)
     await message.answer("Отправь промокод одним сообщением.")
 

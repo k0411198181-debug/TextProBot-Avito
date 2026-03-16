@@ -10,18 +10,6 @@ from aiogram.types import (
 from config import settings
 
 
-def share_bot_inline(bot_username: str, user_id: int) -> InlineKeyboardMarkup:
-    bot_slug = bot_username or "your_bot"
-    share_text = "Попробуй TextPro Bot — он пишет объявления, SEO и посты за минуту"
-    share_url = (
-        f"https://t.me/share/url?url=https://t.me/{bot_slug}?start=ref_{user_id}"
-        f"&text={share_text}"
-    )
-    return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="📤 Поделиться ботом", url=share_url)]]
-    )
-
-
 def main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -87,7 +75,6 @@ def tariffs_inline() -> InlineKeyboardMarkup:
 def paywall_inline() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 Улучшить текст — Pro", callback_data="buy_pro")],
             [InlineKeyboardButton(text=f"💎 Start — {settings.start_price_stars}⭐", callback_data="buy_start")],
             [InlineKeyboardButton(text=f"🚀 Pro — {settings.pro_price_stars}⭐", callback_data="buy_pro")],
             [InlineKeyboardButton(text=f"👑 Max — {settings.max_price_stars}⭐", callback_data="buy_max")],
@@ -112,5 +99,18 @@ def avito_actions_inline() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="Сделать агрессивнее", callback_data="regen:hard")],
             [InlineKeyboardButton(text="Сделать короче", callback_data="regen:short")],
             [InlineKeyboardButton(text="Под срочную продажу", callback_data="regen:urgent")],
+        ]
+    )
+
+
+def avito_followup_inline() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🛡️ Анти-торг", callback_data="avitoextra:anti")],
+            [InlineKeyboardButton(text="🧟 Пожиратели времени", callback_data="avitoextra:ghost")],
+            [InlineKeyboardButton(text="💬 FAQ покупателям", callback_data="avitoextra:faq")],
+            [InlineKeyboardButton(text="🚚 Привезти / показать", callback_data="avitoextra:delivery")],
+            [InlineKeyboardButton(text="✨ Добавить эмоджи", callback_data="avitoextra:emoji")],
+            [InlineKeyboardButton(text="💎 Усилить продажу", callback_data="avitoextra:sell")],
         ]
     )
